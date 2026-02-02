@@ -10,7 +10,6 @@ terraform {
     bucket = "buddy-athletics-terraform-state-bucket"
     key    = "infrastructure-poc/terraform.tfstate"
     region = "us-east-1"
-    profile = "buddy-athletics"
   }
 }
 
