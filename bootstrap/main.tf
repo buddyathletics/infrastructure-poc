@@ -66,10 +66,11 @@ resource "aws_iam_role" "github_actions_deploy" {
       Action = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringLike = {
-          # Scoped to specific branches. Add new repos here as onboarded.
+          # Scoped to specific branches and tags. Add new repos here as onboarded.
           "token.actions.githubusercontent.com:sub" = [
             "repo:buddyathletics/buddyapp-poc:ref:refs/heads/main",
             "repo:buddyathletics/buddyapp-poc:ref:refs/heads/dev",
+            "repo:buddyathletics/buddyapp-poc:ref:refs/tags/*",
             "repo:buddyathletics/infrastructure-poc:ref:refs/heads/main"
           ]
         }
