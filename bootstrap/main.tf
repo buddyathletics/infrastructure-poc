@@ -66,9 +66,10 @@ resource "aws_iam_role" "github_actions_deploy" {
       Action = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringLike = {
-          # Scoped to main branch only. Add new repos here as onboarded.
+          # Scoped to specific branches. Add new repos here as onboarded.
           "token.actions.githubusercontent.com:sub" = [
             "repo:buddyathletics/buddyapp-poc:ref:refs/heads/main",
+            "repo:buddyathletics/buddyapp-poc:ref:refs/heads/dev",
             "repo:buddyathletics/infrastructure-poc:ref:refs/heads/main"
           ]
         }
@@ -116,10 +117,14 @@ resource "aws_iam_role_policy" "github_actions_deploy_policy" {
         Resource = "*"
       },
       {
-        Sid      = "CloudWatchLogs"
-        Effect   = "Allow"
-        Action   = ["logs:*"]
-        Resource = "arn:aws:logs:us-east-1:*:log-group:/ecs/*"
+        Sid    = "CloudWatchLogs"
+        Effect = "Allow"
+        Action = ["logs:*"]
+        Resource = [
+          "arn:aws:logs:us-east-1:643025068953:log-group:/ecs/*",
+          "arn:aws:logs:us-east-1:643025068953:log-group:/ecs/*:*",
+          "arn:aws:logs:us-east-1:643025068953:log-group::log-stream:"
+        ]
       },
       {
         Sid    = "IAMRoleManagement"
