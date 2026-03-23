@@ -141,7 +141,9 @@ resource "aws_iam_role_policy" "github_actions_deploy_policy" {
           "iam:DeleteRolePolicy",
           "iam:ListRolePolicies",
           "iam:ListAttachedRolePolicies",
-          "iam:ListInstanceProfilesForRole"
+          "iam:ListInstanceProfilesForRole",
+          "iam:TagRole",
+          "iam:UntagRole"
         ]
         Resource = "arn:aws:iam::*:role/*-ecs-task-execution-role"
       },
