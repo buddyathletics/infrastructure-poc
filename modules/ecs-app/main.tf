@@ -8,20 +8,6 @@ locals {
 
 data "aws_region" "current" {}
 
-# --- ECR Repository ---
-
-resource "aws_ecr_repository" "app" {
-  name = var.app_name
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "${var.app_name}-ecr"
-  })
-}
-
 # --- Security Group ---
 
 resource "aws_security_group" "ecs_tasks" {
@@ -96,7 +82,7 @@ resource "aws_ecs_task_definition" "app" {
 
   container_definitions = jsonencode([{
     name  = "${var.app_name}-container"
-    image = "${aws_ecr_repository.app.repository_url}:${var.image_tag}"
+    image = "${var.ecr_repository_url}:${var.image_tag}"
     portMappings = [{
       containerPort = var.container_port
       hostPort      = var.container_port

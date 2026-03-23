@@ -3,11 +3,6 @@ output "ecs_service_name" {
   value       = aws_ecs_service.app.name
 }
 
-output "ecr_repository_url" {
-  description = "ECR repository URL for pushing images"
-  value       = aws_ecr_repository.app.repository_url
-}
-
 output "security_group_id" {
   description = "Security group ID for the ECS tasks"
   value       = aws_security_group.ecs_tasks.id

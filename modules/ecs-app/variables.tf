@@ -1,7 +1,12 @@
 # --- Required ---
 
 variable "app_name" {
-  description = "Unique application name. Used in all resource names and ECR repo."
+  description = "Unique application name. Used in all resource names."
+  type        = string
+}
+
+variable "ecr_repository_url" {
+  description = "ECR repository URL (shared across environments)"
   type        = string
 }
 
