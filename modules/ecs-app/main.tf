@@ -1,0 +1,146 @@
+locals {
+  common_tags = merge(var.tags, {
+    App         = var.app_name
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  })
+}
+
+data "aws_region" "current" {}
+
+# --- ECR Repository ---
+
+resource "aws_ecr_repository" "app" {
+  name = var.app_name
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${var.app_name}-ecr"
+  })
+}
+
+# --- Security Group ---
+
+resource "aws_security_group" "ecs_tasks" {
+  name        = "${var.app_name}-ecs-tasks-sg"
+  description = "Security group for ${var.app_name} ECS tasks"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description = "Allow inbound on container port"
+    from_port   = var.container_port
+    to_port     = var.container_port
+    protocol    = "tcp"
+    cidr_blocks = var.ingress_cidr_blocks
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${var.app_name}-ecs-tasks-sg"
+  })
+}
+
+# --- IAM ---
+
+resource "aws_iam_role" "ecs_task_execution_role" {
+  name = "${var.app_name}-ecs-task-execution-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ecs-tasks.amazonaws.com"
+      }
+    }]
+  })
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
+  role       = aws_iam_role.ecs_task_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+# --- CloudWatch Logs ---
+
+resource "aws_cloudwatch_log_group" "app" {
+  name              = "/ecs/${var.app_name}"
+  retention_in_days = var.log_retention_days
+
+  tags = merge(local.common_tags, {
+    Name = "${var.app_name}-logs"
+  })
+}
+
+# --- ECS Task Definition ---
+
+resource "aws_ecs_task_definition" "app" {
+  family                   = "${var.app_name}-task"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = var.cpu
+  memory                   = var.memory
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+
+  container_definitions = jsonencode([{
+    name  = "${var.app_name}-container"
+    image = "${aws_ecr_repository.app.repository_url}:${var.image_tag}"
+    portMappings = [{
+      containerPort = var.container_port
+      hostPort      = var.container_port
+      protocol      = "tcp"
+    }]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         = aws_cloudwatch_log_group.app.name
+        "awslogs-region"        = data.aws_region.current.name
+        "awslogs-stream-prefix" = "ecs"
+      }
+    }
+    environment = var.environment_variables
+  }])
+
+  tags = merge(local.common_tags, {
+    Name = "${var.app_name}-task-definition"
+  })
+}
+
+# --- ECS Service ---
+
+resource "aws_ecs_service" "app" {
+  name            = "${var.app_name}-service"
+  cluster         = var.ecs_cluster_arn
+  task_definition = aws_ecs_task_definition.app.arn
+  desired_count   = var.desired_count
+  launch_type     = "FARGATE"
+
+  health_check_grace_period_seconds = 60
+
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
+  network_configuration {
+    subnets          = var.subnet_ids
+    security_groups  = [aws_security_group.ecs_tasks.id]
+    assign_public_ip = var.assign_public_ip
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${var.app_name}-ecs-service"
+  })
+}
