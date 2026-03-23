@@ -157,6 +157,7 @@ resource "aws_iam_role_policy" "github_actions_deploy_policy" {
           "ecr:UploadLayerPart",
           "ecr:CompleteLayerUpload",
           "ecr:DescribeRepositories",
+          "ecr:DescribeImages",
           "ecr:CreateRepository",
           "ecr:DeleteRepository",
           "ecr:ListTagsForResource",
